@@ -29,7 +29,7 @@ private:
 		Node* prev;
 		Node* next;
 		Node(const T& val) : data(val), prev(nullptr), next(nullptr) {}
-	}
+	};
 
 	Node* head;
 	Node* tail;
@@ -269,23 +269,63 @@ template<class Key, class T, class Hash = std::hash<Key>, class Equal = std::equ
 class hashmap {
 public:
 	using value_type = pair<const Key, T>;
+
+private:
 	/**
 	 * elements
 	 * add whatever you want
 	 */
+	std::vector< double_list<value_type> > buckets;
+    size_t bucket_cnt;
+    size_t size;
+    float factor;
+    Hash hasher;
+    Equal equal;
+	 void swap(hashmap& other)
+	 {
+        std::swap(buckets, other.buckets);
+        std::swap(bucket_cnt, other.bucket_cnt);
+        std::swap(size, other.size);
+        std::swap(factor, other.factor);
+        std::swap(hasher, other.hasher);
+        std::swap(equal, other.equal);
+    }
 
+public:
 	// --------------------------
 
 	/**
 	 * the follows are constructors and destructors
 	 * you can also add some if needed.
 	 */
-	hashmap() {}
-	hashmap(const hashmap &other) {}
-	~hashmap() {}
-	hashmap &operator=(const hashmap &other) {}
+	hashmap() : bucket_cnt(16), size(0), factor(0.75f)
+	{
+        buckets.resize(bucket_cnt);
+    }
+	hashmap(const hashmap &other) : bucket_cnt(other.bucket_cnt), size(other.size), factor(other.factor), hasher(other.hasher), equal(other.equal) {
+		buckets.resize(bucket_cnt);
+		for (int i = 0; i < bucket_cnt; ++i)
+		{
+			buckets[i] = other.buckets[i];
+		}
+	}
+	~hashmap()  = default;
+	hashmap &operator=(const hashmap &other) {
+		if (this != &other)
+		{
+            hashmap tmp(other);
+            swap(tmp);
+        }
+        return *this;
+	}
 
 	class iterator {
+	private:
+        friend class hashmap;
+        hashmap* map;
+        size_t idx;
+        typename double_list<value_type>::iterator iter;
+	
 	public:
 		/**
 		 * elements
@@ -296,51 +336,138 @@ public:
 		 * the follows are constructors and destructors
 		 * you can also add some if needed.
 		 */
-		iterator() {}
-		iterator(const iterator &t) {}
-		~iterator() {}
+		iterator() : map(nullptr), idx(0), iter() {}
+		iterator(hashmap* m, size_t idx, typename double_list<value_type>::iterator it)
+            : map(m), idx(idx), iter(it) {}
+		iterator(const iterator &t) : map(t.map), idx(t.idx), iter(t.iter) {}
+		~iterator() = default;
 
 		/**
 		 * if point to nothing
 		 * throw
 		 */
-		value_type &operator*() const {}
+		value_type &operator*() const {
+			if (map == nullptr || idx >= map->bucket_cnt || iter == map->buckets[idx].end())
+                throw "invalid";
+            return *iter;
+		}
 
 		/**
 		 * other operation
 		 */
-		value_type *operator->() const noexcept {}
-		bool operator==(const iterator &rhs) const {}
-		bool operator!=(const iterator &rhs) const {}
+		value_type *operator->() const noexcept {
+			return &(*iter);
+		}
+		bool operator==(const iterator &rhs) const {
+			if (map != rhs.map) return false;
+            if (idx != rhs.idx) return false;
+            if (idx == map->bucket_cnt) return true; // index of end()
+            return iter == rhs.iter;
+		}
+		bool operator!=(const iterator &rhs) const {
+			return !(*this == rhs);
+		}
 	};
 
-	void clear() {}
+	void clear() {
+		hashmap empty;
+		swap(empty);
+	}
 	/**
 	 * you need to expand the hashmap dynamically
 	 */
-	void expand() {}
+	void expand() {
+		int new_cnt = bucket_cnt << 1;
+		std::vector< double_list<value_type> > new_buckets(new_cnt);
+
+		for (int i = 0; i < bucket_cnt; ++i)
+		{
+			auto& bucket = buckets[i];
+			auto it = bucket.begin();
+            while (it != bucket.end())
+			{
+                new_buckets[hasher(it->first) % new_cnt].insert_tail(*it);
+            	it = buckets[i].erase(it);
+            }
+		}
+		buckets.swap(new_buckets);
+		bucket_cnt = new_cnt;
+	}
 
 	/**
 	 * the iterator point at nothing
 	 */
-	iterator end() const {}
+	iterator end() const {
+		return iterator(const_cast<hashmap*>(this), bucket_cnt, {});
+	}
 	/**
 	 * find, return a pointer point to the value
 	 * not find, return the end (point to nothing)
 	 */
-	iterator find(const Key &key) const {}
+	iterator find(const Key &key) const {
+		size_t idx = hasher(key) % bucket_cnt;
+        auto& bucket = const_cast<double_list<value_type>&>(buckets[idx]);
+        for (auto it = bucket.begin(); it != bucket.end(); ++it)
+		{
+            if (equal(it->first, key))
+                return iterator(const_cast<hashmap*>(this), idx, it);
+        }
+        return end();
+	}
 	/**
 	 * already have a value_pair with the same key
 	 * -> just update the value, return false
 	 * not find a value_pair with the same key
 	 * -> insert the value_pair, return true
 	 */
-	sjtu::pair<iterator, bool> insert(const value_type &value_pair) {}
+	sjtu::pair<iterator, bool> insert(const value_type &value_pair) {
+		const Key& key = value_pair.first;
+        size_t idx = hasher(key) % bucket_cnt;
+        auto& bucket = buckets[idx];
+
+        for (auto it = bucket.begin(); it != bucket.end(); ++it)
+		{
+            if (equal(it->first, key))
+			{
+                it->second = value_pair.second;
+                return {iterator(this, idx, it), false};
+            }
+        }
+
+        if (size + 1 > bucket_cnt * factor) 
+		{
+            expand();
+            idx = hasher(key) % bucket_cnt; // new index in expanded buckets
+        }
+        bucket.insert_tail(value_pair);
+        size++;
+        auto it = --bucket.end();
+        return {iterator(this, idx, it), true};
+	}
 	/**
 	 * the value_pair exists, remove and return true
 	 * otherwise, return false
 	 */
-	bool remove(const Key &key) {}
+	bool remove(const Key &key) {
+		size_t idx = hasher(key) % bucket_cnt;
+        auto& bucket = buckets[idx];
+
+		for (auto it = bucket.begin(); it != bucket.end(); ++it)
+		{
+            if (equal(it->first, key))
+			{
+                bucket.erase(it);
+				size--;
+                return true;
+            }
+        }
+		return false;
+	}
+
+	bool empty()
+	{
+		return size == 0;
+	}
 };
 
 template<class Key, class T, class Hash = std::hash<Key>, class Equal = std::equal_to<Key>>
