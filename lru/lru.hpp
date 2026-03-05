@@ -377,7 +377,8 @@ public:
 	 * you need to expand the hashmap dynamically
 	 */
 	void expand() {
-		int new_cnt = bucket_cnt << 1;
+		size_t new_cnt = bucket_cnt << 1;
+		if (new_cnt == 0) new_cnt = 1;
 		std::vector< double_list<value_type> > new_buckets(new_cnt);
 
 		for (int i = 0; i < bucket_cnt; ++i)
@@ -439,9 +440,11 @@ public:
             expand();
             idx = hasher(key) % bucket_cnt; // new index in expanded buckets
         }
-        bucket.insert_tail(value_pair);
+
+		auto& new_bucket = buckets[idx];
+        new_bucket.insert_tail(value_pair);
         size++;
-        auto it = --bucket.end();
+        auto it = --new_bucket.end();
         return {iterator(this, idx, it), true};
 	}
 	/**
