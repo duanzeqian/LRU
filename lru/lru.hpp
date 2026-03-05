@@ -22,6 +22,18 @@ public:
 namespace sjtu {
 template<class T>
 class double_list {
+private:
+	struct Node
+	{
+		T data;
+		Node* prev;
+		Node* next;
+		Node(const T& val) : data(val), prev(nullptr), next(nullptr) {}
+	}
+
+	Node* head;
+	Node* tail;
+	size_t size;
 public:
 	/**
 	 * elements
@@ -33,11 +45,39 @@ public:
 	 * the follows are constructors and destructors
 	 * you can also add some if needed.
 	 */
-	double_list() {}
-	double_list(const double_list<T> &other) {}
-	~double_list() {}
+	double_list() : head(nullptr), tail(nullptr), size(0) {}
+	double_list(const double_list<T> &other) : head(nullptr), tail(nullptr), size(0)
+	{
+		Node* pos = other.head;
+		while (pos != nullptr)
+		{
+			insert_tail(pos->data);
+			pos = pos->next;
+		}
+	}
+	~double_list() {
+		clear();
+	}
+	double_list& operator=(const double_list& other)
+	{
+		if (this != &other)
+		{
+			clear();
+			Node* pos = other.head;
+			while (pos != nullptr)
+			{
+				insert_tail(pos->data);
+				pos = pos->next;
+			}
+		}
+		return *this;
+	}
 
 	class iterator {
+	private:
+		friend class double_list;
+		Node* iter;
+		double_list* list;
 	public:
 		/**
 		 * elements
@@ -48,50 +88,99 @@ public:
 		 * the follows are constructors and destructors
 		 * you can also add some if needed.
 		 */
-		iterator() {}
-		iterator(const iterator &t) {}
-		~iterator() {}
+		iterator(Node* it = nullptr, double_list* l = nullptr) : iter(it), list(l) {}
+		iterator(const iterator &t) : iter(t.iter), list(t.list) {}
+		~iterator() = default;
 		
 		/**
 		 * iter++
 		 */
-		iterator operator++(int) {}
+		iterator operator++(int) {
+			if (iter == nullptr) throw("invalid");
+			iterator tmp = *this;
+			iter = iter->next;
+			return tmp;
+		}
 		/**
 		 * ++iter
 		 */
-		iterator &operator++() {}
+		iterator &operator++() {
+			if (iter == nullptr) throw("invalid");
+			iter = iter->next;
+			return *this;
+		}
 		/**
 		 * iter--
 		 */
-		iterator operator--(int) {}
+		iterator operator--(int) {
+			if (iter == nullptr)
+			{
+				if (list == nullptr || list->tail == nullptr) throw("invalid");
+				iterator tmp = *this;
+				iter = list->tail;
+				return tmp;
+			}
+			else
+			{
+				if (iter->prev == nullptr) throw("invalid");
+				iterator tmp = *this;
+				iter = iter->prev;
+				return tmp;
+			}
+		}
 		/**
 		 * --iter
 		 */
-		iterator &operator--() {}
+		iterator &operator--() {
+			if (iter == nullptr)
+			{
+				if (list == nullptr || list->tail == nullptr) throw("invalid");
+				iter = list->tail;
+			}
+			else
+			{
+				if (iter->prev == nullptr) throw("invalid");
+				iter = iter->prev;
+			}
+			return *this;
+		}
 		
 		/**
 		 * if the iter didn't point to a value
 		 * throw " invalid"
 		 */
-		T &operator*() const {}
+		T &operator*() const {
+			if (iter == nullptr) throw("invalid");
+			return iter->data;
+		}
 		
 		/**
 		 * other operation
 		 */
-		T *operator->() const noexcept {}
-		bool operator==(const iterator &rhs) const {}
-		bool operator!=(const iterator &rhs) const {}
+		T *operator->() const noexcept {
+			return &(iter->data);
+		}
+		bool operator==(const iterator &rhs) const {
+			return iter == rhs.iter && list == rhs.list;
+		}
+		bool operator!=(const iterator &rhs) const {
+			return !(*this == rhs);
+		}
 	};
 	/**
 	 * return an iterator to the beginning
 	 */
-	iterator begin() {}
+	iterator begin() {
+		return iterator(head, this);
+	}
 	/**
 	 * return an iterator to the ending
 	 * in fact, it returns the iterator point to nothing,
 	 * just after the last element.
 	 */
-	iterator end() {}
+	iterator end() {
+		return iterator(nullptr, this);
+	}
 	/**
 	 * if the iter didn't point to anything, do nothing,
 	 * otherwise, delete the element pointed by the iter
@@ -103,20 +192,77 @@ public:
 	 *  or nothing if the list after the operation
 	 *  don't contain 2nd elememt.
 	 */
-	iterator erase(iterator pos) {}
+	iterator erase(iterator pos) {
+		Node* iter = pos.iter;
+		if (iter == nullptr || pos.list != this) return pos;
+		Node* nextNode = iter->next;
+		
+		if (iter->prev != nullptr) iter->prev->next = iter->next;
+		else head = iter->next;
+		if (iter->next != nullptr) iter->next->prev = iter->prev;
+		else tail = iter->prev;
+
+		delete iter;
+		size--;
+		return iterator(nextNode, this);
+	}
+
+	void clear()
+	{
+		while (head != nullptr)
+		{
+			Node* tmp = head;
+			head = head->next;
+			delete tmp;
+		}
+		tail = nullptr;
+		size = 0;
+	}
 
 	/**
 	 * the following are operations of double list
 	 */
-	void insert_head(const T &val) {}
-	void insert_tail(const T &val) {}
-	void delete_head() {}
-	void delete_tail() {}
+	void insert_head(const T &val) {
+		Node* newNode = new Node(val);
+		newNode->next = head;
+		if (head != nullptr) head->prev = newNode;
+		else tail = newNode;
+		head = newNode;
+		size++;
+	}
+	void insert_tail(const T &val) {
+		Node* newNode = new Node(val);
+		newNode->prev = tail;
+		if (tail != nullptr) tail->next = newNode;
+		else head = newNode;
+		tail = newNode;
+		size++;
+	}
+	void delete_head() {
+		if (head == nullptr) return;
+		Node* oldNode = head;
+		head = head->next;
+		if (head != nullptr) head->prev = nullptr;
+		else tail = nullptr;
+		delete oldNode;
+		size--;
+	}
+	void delete_tail() {
+		if (tail == nullptr) return;
+		Node* oldNode = tail;
+		tail = tail->prev;
+		if (tail != nullptr) tail->next = nullptr;
+		else head = nullptr;
+		delete oldNode;
+		size--;
+	}
 	/**
 	 * if didn't contain anything, return true,
 	 * otherwise false.
 	 */
-	bool empty() {}
+	bool empty() {
+		return size == 0;
+	}
 };
 
 template<class Key, class T, class Hash = std::hash<Key>, class Equal = std::equal_to<Key>>
