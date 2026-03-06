@@ -713,7 +713,7 @@ public:
 	 * if didn't contain anything, return true,
 	 * otherwise false.
 	 */
-	bool empty() const {
+	bool empty() {
 		return list.empty();
 	}
 
@@ -744,15 +744,17 @@ public:
             order_iter->second = value.second;
             value_type val = *order_iter;
             list.erase(order_iter); // delete the old
-            list.insert_head(val); // insert the latest
-            auto new_it = list.begin();
+            list.insert_tail(val); // insert the latest
+            auto new_it = list.end();
+			new_it--;
             map.insert(sjtu::pair<const Key, order_iterator>(key, new_it));
             return sjtu::pair<iterator, bool>(iterator(new_it), false);
         }
 		else
 		{
-            list.insert_head(value);
-            auto new_it = list.begin();
+            list.insert_tail(value);
+            auto new_it = list.end();
+			new_it--;
             map.insert(sjtu::pair<const Key, order_iterator>(key, new_it));
             return sjtu::pair<iterator, bool>(iterator(new_it), true);
         }
