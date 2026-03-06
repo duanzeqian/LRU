@@ -281,20 +281,20 @@ private:
 	 * add whatever you want
 	 */
 	std::vector< double_list<value_type> > buckets;
-    size_t bucket_cnt;
-    size_t size;
-    float factor;
-    Hash hasher;
-    Equal equal;
-	 void swap(hashmap& other)
-	 {
-        std::swap(buckets, other.buckets);
-        std::swap(bucket_cnt, other.bucket_cnt);
-        std::swap(size, other.size);
-        std::swap(factor, other.factor);
-        std::swap(hasher, other.hasher);
-        std::swap(equal, other.equal);
-    }
+	size_t bucket_cnt;
+	size_t size;
+	float factor;
+	Hash hasher;
+	Equal equal;
+	void swap(hashmap& other)
+	{
+		std::swap(buckets, other.buckets);
+		std::swap(bucket_cnt, other.bucket_cnt);
+		std::swap(size, other.size);
+		std::swap(factor, other.factor);
+		std::swap(hasher, other.hasher);
+		std::swap(equal, other.equal);
+	}
 
 public:
 	// --------------------------
@@ -305,8 +305,8 @@ public:
 	 */
 	hashmap() : bucket_cnt(16), size(0), factor(0.75f)
 	{
-        buckets.resize(bucket_cnt);
-    }
+		buckets.resize(bucket_cnt);
+	}
 	hashmap(const hashmap &other) : bucket_cnt(other.bucket_cnt), size(other.size), factor(other.factor), hasher(other.hasher), equal(other.equal) {
 		buckets.resize(bucket_cnt);
 		for (int i = 0; i < bucket_cnt; ++i)
@@ -318,18 +318,18 @@ public:
 	hashmap &operator=(const hashmap &other) {
 		if (this != &other)
 		{
-            hashmap tmp(other);
-            swap(tmp);
-        }
-        return *this;
+			hashmap tmp(other);
+			swap(tmp);
+		}
+		return *this;
 	}
 
 	class iterator {
 	private:
-        friend class hashmap;
-        hashmap* map;
-        size_t idx;
-        typename double_list<value_type>::iterator iter;
+		friend class hashmap;
+		hashmap* map;
+		size_t idx;
+		typename double_list<value_type>::iterator iter;
 	
 	public:
 		/**
@@ -343,7 +343,7 @@ public:
 		 */
 		iterator() : map(nullptr), idx(0), iter() {}
 		iterator(hashmap* m, size_t idx, typename double_list<value_type>::iterator it)
-            : map(m), idx(idx), iter(it) {}
+			: map(m), idx(idx), iter(it) {}
 		iterator(const iterator &t) : map(t.map), idx(t.idx), iter(t.iter) {}
 		~iterator() = default;
 
@@ -353,8 +353,8 @@ public:
 		 */
 		value_type &operator*() const {
 			if (map == nullptr || idx >= map->bucket_cnt || iter == map->buckets[idx].end())
-                throw("invalid");
-            return *iter;
+				throw("invalid");
+			return *iter;
 		}
 
 		/**
@@ -365,9 +365,9 @@ public:
 		}
 		bool operator==(const iterator &rhs) const {
 			if (map != rhs.map) return false;
-            if (idx != rhs.idx) return false;
-            if (idx == map->bucket_cnt) return true; // index of end()
-            return iter == rhs.iter;
+			if (idx != rhs.idx) return false;
+			if (idx == map->bucket_cnt) return true; // index of end()
+			return iter == rhs.iter;
 		}
 		bool operator!=(const iterator &rhs) const {
 			return !(*this == rhs);
@@ -390,11 +390,11 @@ public:
 		{
 			auto& bucket = buckets[i];
 			auto it = bucket.begin();
-            while (it != bucket.end())
+			while (it != bucket.end())
 			{
-                new_buckets[hasher(it->first) % new_cnt].insert_tail(*it);
-            	it = buckets[i].erase(it);
-            }
+				new_buckets[hasher(it->first) % new_cnt].insert_tail(*it);
+				it = buckets[i].erase(it);
+			}
 		}
 		buckets.swap(new_buckets);
 		bucket_cnt = new_cnt;
@@ -412,13 +412,13 @@ public:
 	 */
 	iterator find(const Key &key) const {
 		size_t idx = hasher(key) % bucket_cnt;
-        auto& bucket = const_cast<double_list<value_type>&>(buckets[idx]);
-        for (auto it = bucket.begin(); it != bucket.end(); ++it)
+		auto& bucket = const_cast<double_list<value_type>&>(buckets[idx]);
+		for (auto it = bucket.begin(); it != bucket.end(); ++it)
 		{
-            if (equal(it->first, key))
-                return iterator(const_cast<hashmap*>(this), idx, it);
-        }
-        return end();
+			if (equal(it->first, key))
+				return iterator(const_cast<hashmap*>(this), idx, it);
+		}
+		return end();
 	}
 	/**
 	 * already have a value_pair with the same key
@@ -428,29 +428,29 @@ public:
 	 */
 	sjtu::pair<iterator, bool> insert(const value_type &value_pair) {
 		const Key& key = value_pair.first;
-        size_t idx = hasher(key) % bucket_cnt;
-        auto& bucket = buckets[idx];
+		size_t idx = hasher(key) % bucket_cnt;
+		auto& bucket = buckets[idx];
 
-        for (auto it = bucket.begin(); it != bucket.end(); ++it)
+		for (auto it = bucket.begin(); it != bucket.end(); ++it)
 		{
-            if (equal(it->first, key))
+			if (equal(it->first, key))
 			{
-                it->second = value_pair.second;
-                return {iterator(this, idx, it), false};
-            }
-        }
+				it->second = value_pair.second;
+				return {iterator(this, idx, it), false};
+ 			}
+		}
 
-        if (size + 1 > bucket_cnt * factor) 
+		if (size + 1 > bucket_cnt * factor) 
 		{
-            expand();
-            idx = hasher(key) % bucket_cnt; // new index in expanded buckets
+			expand();
+			idx = hasher(key) % bucket_cnt; // new index in expanded buckets
         }
 
 		auto& new_bucket = buckets[idx];
-        new_bucket.insert_tail(value_pair);
-        size++;
-        auto it = --new_bucket.end();
-        return {iterator(this, idx, it), true};
+		new_bucket.insert_tail(value_pair);
+		size++;
+		auto it = --new_bucket.end();
+		return {iterator(this, idx, it), true};
 	}
 	/**
 	 * the value_pair exists, remove and return true
@@ -458,17 +458,17 @@ public:
 	 */
 	bool remove(const Key &key) {
 		size_t idx = hasher(key) % bucket_cnt;
-        auto& bucket = buckets[idx];
+		auto& bucket = buckets[idx];
 
 		for (auto it = bucket.begin(); it != bucket.end(); ++it)
 		{
-            if (equal(it->first, key))
+			if (equal(it->first, key))
 			{
-                bucket.erase(it);
+				bucket.erase(it);
 				size--;
-                return true;
-            }
-        }
+				return true;
+			}
+		}
 		return false;
 	}
 
@@ -485,8 +485,8 @@ public:
 
 private:
 	double_list<value_type> list;
-    using order_iterator = typename double_list<value_type>::iterator;
-    hashmap<Key, order_iterator, Hash, Equal> map;
+	using order_iterator = typename double_list<value_type>::iterator;
+	hashmap<Key, order_iterator, Hash, Equal> map;
 	/**
 	 * elements
 	 * add whatever you want
@@ -498,7 +498,7 @@ public:
 	class iterator {
 	private:
 		friend class linked_hashmap;
-        order_iterator iter;
+		order_iterator iter;
 	
 	public:
 		// --------------------------
@@ -568,12 +568,12 @@ public:
 	class const_iterator {
 	private:
 		friend class linked_hashmap;
-        order_iterator iter; 
+		order_iterator iter; 
 	
 	public:
 		// --------------------------
 		const_iterator() = default;
-        const_iterator(const order_iterator& it) : iter(it) {}
+		const_iterator(const order_iterator& it) : iter(it) {}
 		const_iterator(const iterator &other) : iter(other.iter) {}
 		~const_iterator() = default;
 
@@ -615,12 +615,12 @@ public:
 		const value_type &operator*() const {
 			try
 			{
-                return *iter;
-            }
+				return *iter;
+			}
 			catch (const char*)
 			{
-                throw("star invalid");
-            }
+				throw("star invalid");
+			}
 		}
 		const value_type *operator->() const noexcept {
 			return &(*iter);
@@ -638,18 +638,18 @@ public:
 	linked_hashmap() = default;
 	linked_hashmap(const linked_hashmap &other) {
 		list = other.list; // copy order_list
-        auto it = list.begin(); // copy hash_map (in the order of order_list)
-        while (it != list.end())
+		auto it = list.begin(); // copy hash_map (in the order of order_list)
+		while (it != list.end())
 		{
-            map.insert(sjtu::pair<const Key, order_iterator>(it->first, it));
-            ++it;
-        }
+			map.insert(sjtu::pair<const Key, order_iterator>(it->first, it));
+			++it;
+		}
 	}
 	~linked_hashmap() = default;
 	linked_hashmap &operator=(const linked_hashmap &other) {
 		if (this != &other)
 		{
-            list = other.list;
+			list = other.list;
 			map.clear();
 			auto it = list.begin();
 			while (it != list.end())
@@ -657,8 +657,8 @@ public:
 				map.insert(sjtu::pair<const Key, order_iterator>(it->first, it));
 				++it;
 			}
-        }
-        return *this;
+		}
+		return *this;
 	}
 
 	/**
@@ -667,21 +667,21 @@ public:
 	 */
 	T &at(const Key &key) {
 		auto it = map.find(key);
-        if (it == map.end()) throw("key not found");
+		if (it == map.end()) throw("key not found");
 
-        order_iterator order_iter = it->second; // touched
-        value_type val = *order_iter;
-        list.erase(order_iter);
-        list.insert_head(val);
-        auto new_it = list.begin();
-        map.insert(sjtu::pair<const Key, order_iterator>(key, new_it));
-        return new_it->second;
+		order_iterator order_iter = it->second; // touched
+		value_type val = *order_iter;
+		list.erase(order_iter);
+		list.insert_head(val);
+		auto new_it = list.begin();
+		map.insert(sjtu::pair<const Key, order_iterator>(key, new_it));
+		return new_it->second;
 	}
 	const T &at(const Key &key) const {
 		auto it = map.find(key);
-        if (it == map.end()) throw("key not found");
+		if (it == map.end()) throw("key not found");
 
-        return it->second->second;
+		return it->second->second;
 	}
 	T &operator[](const Key &key) {
 		return at(key);
@@ -737,27 +737,27 @@ public:
 	 */
 	pair<iterator, bool> insert(const value_type &value) {
 		const Key& key = value.first;
-        auto it = map.find(key);
-        if (it != map.end()) // has this key in hash_map
+		auto it = map.find(key);
+		if (it != map.end()) // has this key in hash_map
 		{
-            order_iterator order_iter = it->second;
-            order_iter->second = value.second;
-            value_type val = *order_iter;
-            list.erase(order_iter); // delete the old
-            list.insert_tail(val); // insert the latest
-            auto new_it = list.end();
+			order_iterator order_iter = it->second;
+			order_iter->second = value.second;
+			value_type val = *order_iter;
+			list.erase(order_iter); // delete the old
+			list.insert_tail(val); // insert the latest
+			auto new_it = list.end();
 			new_it--;
-            map.insert(sjtu::pair<const Key, order_iterator>(key, new_it));
-            return sjtu::pair<iterator, bool>(iterator(new_it), false);
-        }
+			map.insert(sjtu::pair<const Key, order_iterator>(key, new_it));
+			return sjtu::pair<iterator, bool>(iterator(new_it), false);
+		}
 		else
 		{
-            list.insert_tail(value);
-            auto new_it = list.end();
+			list.insert_tail(value);
+			auto new_it = list.end();
 			new_it--;
-            map.insert(sjtu::pair<const Key, order_iterator>(key, new_it));
-            return sjtu::pair<iterator, bool>(iterator(new_it), true);
-        }
+			map.insert(sjtu::pair<const Key, order_iterator>(key, new_it));
+			return sjtu::pair<iterator, bool>(iterator(new_it), true);
+		}
 	}
 	/**
 	 * erase the value_pair pointed by the iterator
@@ -826,8 +826,8 @@ public:
 		else
 		{
 			Matrix<int>* tmp = new Matrix<int>((*it).second);
-            map->insert(value_type(v, *tmp));
-            return tmp;
+			map->insert(value_type(v, *tmp));
+			return tmp;
 		}
 	}
 	/**
