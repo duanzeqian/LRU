@@ -260,6 +260,11 @@ public:
 	 * if didn't contain anything, return true,
 	 * otherwise false.
 	 */
+	size_t siz() const
+	{
+		return size;
+	}
+
 	bool empty() {
 		return size == 0;
 	}
@@ -348,7 +353,7 @@ public:
 		 */
 		value_type &operator*() const {
 			if (map == nullptr || idx >= map->bucket_cnt || iter == map->buckets[idx].end())
-                throw "invalid";
+                throw("invalid");
             return *iter;
 		}
 
@@ -477,133 +482,249 @@ template<class Key, class T, class Hash = std::hash<Key>, class Equal = std::equ
 class linked_hashmap : public hashmap<Key, T, Hash, Equal> {
 public:
 	typedef pair<const Key, T> value_type;
+
+private:
+	double_list<value_type> list;
+    using order_iterator = typename double_list<value_type>::iterator;
+    hashmap<Key, order_iterator, Hash, Equal> map;
 	/**
 	 * elements
 	 * add whatever you want
 	 */
+
+public:
 	// --------------------------
 	class const_iterator;
 	class iterator {
+	private:
+		friend class linked_hashmap;
+        order_iterator iter;
+	
 	public:
-		/**
-		 * elements
-		 * add whatever you want
-		 */
 		// --------------------------
-		iterator() {}
-		iterator(const iterator &other) {}
-		~iterator() {}
+		iterator() = default;
+		iterator(const order_iterator& it) : iter(it) {}
+		iterator(const iterator &other) : iter(other.iter) {}
+		~iterator() = default;
 
 		/**
 		 * iter++
 		 */
-		iterator operator++(int) {}
+		iterator operator++(int) {
+			iterator tmp = *this;
+			iter++;
+			return tmp;
+		}
 		/**
 		 * ++iter
 		 */
-		iterator &operator++() {}
+		iterator &operator++() {
+			iter++;
+			return *this;
+		}
 		/**
 		 * iter--
 		 */
-		iterator operator--(int) {}
+		iterator operator--(int) {
+			iterator tmp = *this;
+			iter--;
+			return tmp;
+		}
 		/**
 		 * --iter
 		 */
-		iterator &operator--() {}
+		iterator &operator--() {
+			iter--;
+			return *this;
+		}
 
 		/**
 		 * if the iter didn't point to a value
 		 * throw "star invalid"
 		 */
-		value_type &operator*() const {}
-		value_type *operator->() const noexcept {}
+		value_type &operator*() const {
+			try
+			{
+				return *iter;
+			}
+			catch(const char*)
+			{
+				throw("star invalid");
+			}
+		}
+		value_type *operator->() const noexcept {
+			return &(*iter);
+		}
 
 		/**
 		 * operator to check whether two iterators are same (pointing to the same memory).
 		 */
-		bool operator==(const iterator &rhs) const {}
-		bool operator!=(const iterator &rhs) const {}
-		bool operator==(const const_iterator &rhs) const {}
-		bool operator!=(const const_iterator &rhs) const {}
+		bool operator==(const iterator &rhs) const { return iter == rhs.iter; }
+		bool operator!=(const iterator &rhs) const { return iter != rhs.iter; }
+		bool operator==(const const_iterator &rhs) const { return iter == rhs.iter; }
+		bool operator!=(const const_iterator &rhs) const { return iter != rhs.iter; }
 	};
 
 	class const_iterator {
+	private:
+		friend class linked_hashmap;
+        order_iterator iter; 
+	
 	public:
-		/**
-		 * elements
-		 * add whatever you want
-		 */
 		// --------------------------
-		const_iterator() {}
-		const_iterator(const iterator &other) {}
+		const_iterator() = default;
+        const_iterator(const order_iterator& it) : iter(it) {}
+		const_iterator(const iterator &other) : iter(other.iter) {}
+		~const_iterator() = default;
 
 		/**
 		 * iter++
 		 */
-		const_iterator operator++(int) {}
+		const_iterator operator++(int) {
+			const_iterator tmp = *this;
+			iter++;
+			return tmp;
+		}
 		/**
 		 * ++iter
 		 */
-		const_iterator &operator++() {}
+		const_iterator &operator++() {
+			iter++;
+			return *this;
+		}
 		/**
 		 * iter--
 		 */
-		const_iterator operator--(int) {}
+		const_iterator operator--(int) {
+			const_iterator tmp = *this;
+			iter--;
+			return tmp;
+		}
 		/**
 		 * --iter
 		 */
-		const_iterator &operator--() {}
+		const_iterator &operator--() {
+			iter--;
+			return *this;
+		}
 
 		/**
 		 * if the iter didn't point to a value
 		 * throw
 		 */
-		const value_type &operator*() const {}
-		const value_type *operator->() const noexcept {}
+		const value_type &operator*() const {
+			try
+			{
+                return *iter;
+            }
+			catch (const char*)
+			{
+                throw("star invalid");
+            }
+		}
+		const value_type *operator->() const noexcept {
+			return &(*iter);
+		}
 
 		/**
 		 * operator to check whether two iterators are same (pointing to the same memory).
 		 */
-		bool operator==(const iterator &rhs) const {}
-		bool operator!=(const iterator &rhs) const {}
-		bool operator==(const const_iterator &rhs) const {}
-		bool operator!=(const const_iterator &rhs) const {}
+		bool operator==(const iterator &rhs) const { return iter == rhs.iter; }
+		bool operator!=(const iterator &rhs) const { return iter != rhs.iter; }
+		bool operator==(const const_iterator &rhs) const { return iter == rhs.iter; }
+		bool operator!=(const const_iterator &rhs) const { return iter != rhs.iter; }
 	};
 
-	linked_hashmap() {}
-	linked_hashmap(const linked_hashmap &other) {}
-	~linked_hashmap() {}
-	linked_hashmap &operator=(const linked_hashmap &other) {}
+	linked_hashmap() = default;
+	linked_hashmap(const linked_hashmap &other) {
+		list = other.list; // copy order_list
+        auto it = list.begin(); // copy hash_map (in the order of order_list)
+        while (it != list.end())
+		{
+            map.insert(sjtu::pair<const Key, order_iterator>(it->first, it));
+            ++it;
+        }
+	}
+	~linked_hashmap() = default;
+	linked_hashmap &operator=(const linked_hashmap &other) {
+		if (this != &other)
+		{
+            list = other.list;
+			map.clear();
+			auto it = list.begin();
+			while (it != list.end())
+			{
+				map.insert(sjtu::pair<const Key, order_iterator>(it->first, it));
+				++it;
+			}
+        }
+        return *this;
+	}
 
 	/**
 	 * return the value connected with the Key(O(1))
 	 * if the key not found, throw
 	 */
-	T &at(const Key &key) {}
-	const T &at(const Key &key) const {}
-	T &operator[](const Key &key) {}
-	const T &operator[](const Key &key) const {}
+	T &at(const Key &key) {
+		auto it = map.find(key);
+        if (it == map.end()) throw("key not found");
+
+        order_iterator order_iter = it->second; // touched
+        value_type val = *order_iter;
+        list.erase(order_iter);
+        list.insert_head(val);
+        auto new_it = list.begin();
+        map.insert(sjtu::pair<const Key, order_iterator>(key, new_it));
+        return new_it->second;
+	}
+	const T &at(const Key &key) const {
+		auto it = map.find(key);
+        if (it == map.end()) throw("key not found");
+
+        return it->second->second;
+	}
+	T &operator[](const Key &key) {
+		return at(key);
+	}
+	const T &operator[](const Key &key) const {
+		return at(key); // the same as const at
+	}
 
 	/**
 	 * return an iterator point to the first
 	 * inserted and existed element
 	 */
-	iterator begin() {}
-	const_iterator cbegin() const {}
+	iterator begin() {
+		return iterator(list.begin());
+	}
+	const_iterator cbegin() const {
+		return const_iterator(const_cast<double_list<value_type>&>(list).begin());
+	}
 	/**
 	 * return an iterator after the last inserted element
 	 */
-	iterator end() {}
-	const_iterator cend() const {}
+	iterator end() {
+		return iterator(list.end());
+	}
+	const_iterator cend() const {
+		return const_iterator(const_cast<double_list<value_type>&>(list).end());
+	}
 	/**
 	 * if didn't contain anything, return true,
 	 * otherwise false.
 	 */
-	bool empty() const {}
+	bool empty() const {
+		return list.empty();
+	}
 
-	void clear() {}
+	void clear() {
+		list.clear();
+		map.clear();
+	}
 
-	size_t size() const {}
+	size_t size() const {
+		return list.siz();
+	}
 	/**
 	 * insert the value_piar
 	 * if the key of the value_pair exists in the map
@@ -614,50 +735,111 @@ public:
 	 * if the key of the value_pair doesn't exist in the map
 	 * add a new element and return true
 	 */
-	pair<iterator, bool> insert(const value_type &value) {}
+	pair<iterator, bool> insert(const value_type &value) {
+		const Key& key = value.first;
+        auto it = map.find(key);
+        if (it != map.end()) // has this key in hash_map
+		{
+            order_iterator order_iter = it->second;
+            order_iter->second = value.second;
+            value_type val = *order_iter;
+            list.erase(order_iter); // delete the old
+            list.insert_head(val); // insert the latest
+            auto new_it = list.begin();
+            map.insert(sjtu::pair<const Key, order_iterator>(key, new_it));
+            return sjtu::pair<iterator, bool>(iterator(new_it), false);
+        }
+		else
+		{
+            list.insert_head(value);
+            auto new_it = list.begin();
+            map.insert(sjtu::pair<const Key, order_iterator>(key, new_it));
+            return sjtu::pair<iterator, bool>(iterator(new_it), true);
+        }
+	}
 	/**
 	 * erase the value_pair pointed by the iterator
 	 * if the iterator points to nothing
 	 * throw
 	 */
-	void remove(iterator pos) {}
+	void remove(iterator pos) {
+		if (pos == end()) throw("invalid");
+		map.remove(pos->first);
+		list.erase(pos.iter);
+	}
 	/**
 	 * return how many value_pairs consist of key
 	 * this should only return 0 or 1
 	 */
-	size_t count(const Key &key) const {}
+	size_t count(const Key &key) const {
+		return map.find(key) != map.end();
+	}
 	/**
 	 * find the iterator points at the value_pair
 	 * which consist of key
 	 * if not find, return the iterator
 	 * point at nothing
 	 */
-	iterator find(const Key &key) {}
+	iterator find(const Key &key) {
+		auto it = map.find(key);
+		if (it == map.end()) return end();
+		return iterator(it->second);
+	}
 };
 
 class lru {
 	using lmap = sjtu::linked_hashmap<Integer, Matrix<int>, Hash, Equal>;
 	using value_type = sjtu::pair<const Integer, Matrix<int>>;
+	using liter = lmap::iterator;
+
+private:
+	lmap* map;
+	size_t size;
 
 public:
-	lru(int size) {}
-	~lru() {}
+	lru(int size) :size(size) {
+		map = new lmap;
+	}
+	~lru() {
+		delete map;
+	}
 	/**
 	 * save the value_pair in the memory
 	 * delete something in the memory if necessary
 	 */
-	void save(const value_type &v) const {}
+	void save(const value_type &v) const {
+		if (map->find(v.first) == map->end() && map->size() == size) // 不存在且已满 
+		{
+			liter it = map->begin();
+			map->remove(it);
+		}
+		map->insert(v);
+	}
 	/**
 	 * return a pointer contain the value
 	 */
-	Matrix<int> *get(const Integer &v) const {}
+	Matrix<int> *get(const Integer &v) const {
+		liter it = map->find(v);
+		if (it == map->end()) return (Matrix<int>*)nullptr;
+		else
+		{
+			Matrix<int>* tmp = new Matrix<int>((*it).second);
+            map->insert(value_type(v, *tmp));
+            return tmp;
+		}
+	}
 	/**
 	 * just print everything in the memory
 	 * to debug or test.
 	 * this operation follows the order, but don't
 	 * change the order.
 	 */
-	void print() {}
+	void print() {
+		for (liter it = map->begin(); it != map->end(); ++it)
+		{
+			std::cout << (*it).first.val << " " << (*it).second << std::endl;
+		}
+	}
 };
 } // namespace sjtu
 
